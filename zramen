@@ -208,6 +208,8 @@ main() {
     echo 'Sorry, requires root privileges'
     exit 1
   fi
+  [[ -d "$WORK_DIR" ]] \
+    && mkdir -p "$WORK_DIR"
   if [[ "$1" == 'make' ]]; then
     make
   elif [[ "$1" == 'toss' ]]; then
