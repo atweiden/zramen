@@ -2,8 +2,6 @@
 
 # ----------------------------------------------------------------------------
 # zramen: manage zram swap space
-#
-# Inspired by https://aur.archlinux.org/packages/zramswap/
 # ----------------------------------------------------------------------------
 
 # ==============================================================================
@@ -12,14 +10,18 @@
 # use this compression algorithm for zram by default
 readonly COMP_ALGORITHM='lz4'
 
-# allocate this number of CPUs for zram by default
-readonly NCPU=$(nproc)
+# give zram swap device highest priority
+readonly PRIORITY=32767
 
 # allocate this percentage of memory for zram by default
-readonly SIZE=33
+readonly SIZE=25
 
-# kernel module wording for number of pre-created zram devices
-readonly ZRAM_PARM="$(modinfo zram | grep -Eo '(num_devices|zram_num_devices)')"
+# set the maximum number of compression streams for zram
+readonly STREAMS=$(nproc)
+
+# set TMPDIR to work directory for mktemp
+readonly WORK_DIR='/var/run/zramen'
+TMPDIR="$WORK_DIR"
 
 # end constants }}}
 # ==============================================================================
@@ -29,15 +31,17 @@ _usage() {
 read -r -d '' _usage_string <<EOF
 Usage:
   zramen [-h|--help] <command>
+  zramen [-n|--num] [-s|--size] make
+  zramen toss
 
 Options:
   -h, --help  Show this help text
-  -n, --num   Number of CPUs to allocate for zram (Default: $NCPU)
+  -n, --num   Number of compression streams for zram (Default: $STREAMS)
   -s, --size  Percentage of memory to allocate for zram (Default: $SIZE)
 
 Commands:
-  up          Activate zram swap space
-  down        Deactivate zram swap space
+  make        Make zram swap device
+  toss        Remove zram swap device
 EOF
 echo "$_usage_string"
 }
@@ -51,7 +55,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     -n|--num)
-      _ncpu="$2"
+      _streams="$2"
       # shift past argument and value
       shift
       shift
@@ -79,51 +83,124 @@ set -- "${_POSITIONAL[@]}"
 # end usage }}}
 # ==============================================================================
 
-# sanitize num input
-_ncpu=${_ncpu:-$NCPU}
-# number of CPUs requested must be 1+
-[[ $_ncpu -gt 0 ]] || _ncpu=1
-# number of CPUs requested must not exceed CPUs available
-[[ $_ncpu -le $NCPU ]] || _ncpu=$NCPU
-
 # sanitize size input
 _size=${_size:-$SIZE}
-[[ $_size -gt 0 ]] || _size=$SIZE
-[[ $_size -le 100 ]] || _size=100
+[[ $_size -gt 0 ]] \
+  || _size=$SIZE
+[[ $_size -le 100 ]] \
+  || _size=100
+
+# sanitize streams input
+_streams=${_streams:-$STREAMS}
+# number of CPUs requested must be 1+
+[[ $_streams -gt 0 ]] \
+  || _streams=1
+# number of CPUs requested must not exceed CPUs available
+[[ $_streams -le $STREAMS ]] \
+  || _streams=$STREAMS
+
+INFO() {
+  echo "zramen#info: $*"
+}
+
+WARN() {
+  echo "zramen#warn: $*"
+}
+
+ERRO() {
+  echo "zramen#error: $*"
+  exit 1
+}
+
+INFO_E() {
+  INFO "$@"
+  exit 0
+}
 
 calc() {
-  # truncate to whole number
-  printf '%.f' "$(bc --mathlib <<< "$@")"
+  # round to nearest tenth
+  printf '%.1f' "$(bc --mathlib <<< "$@")"
 }
 
-up() {
+make() {
   local _mem_total
   local _mem_to_alloc
-  local _mem_per_cpu
-  local _swapdevs
-
-  modprobe zram "$ZRAM_PARM"="$_ncpu"
+  local _zram_dev
 
   _mem_total=$(grep 'MemTotal:' /proc/meminfo | awk '{print $2}')
-  _mem_to_alloc=$(calc "(0 + $_mem_total) * 1024 * ($ZRAM_SIZE / 100)")
-  _mem_per_cpu=$(calc "$_mem_to_alloc / $_ncpu")
+  _mem_to_alloc=$(calc "$_mem_total * 1024 * ($_size / 100)")
 
-  for ((i=0; i < _ncpu; i++)); do
-    echo "$_mem_per_cpu" > "/sys/block/zram$i/disksize"
-    echo "$COMP_ALGORITHM" > "/sys/block/zram$i/comp_algorithm"
-    mkswap "/dev/zram$i" --label "zram$i"
-    _swapdevs+=" /dev/zram$i"
+  if ! [[ -d '/sys/module/zram' ]]; then
+    INFO 'Attempting to find zram module - not part of kernel'
+    modprobe --dry-run zram 2>/dev/null \
+      || ERRO "Sorry, could not find zram module"
+    # loop to handle zram initialization problems
+    for ((i=0; i < 10; i++)); do
+      [[ -d '/sys/module/zram' ]] \
+        && break
+      modprobe zram
+      sleep 1
+    done
+    INFO 'zram module successfully loaded'
+  else
+    INFO 'zram module already loaded'
+  fi
+
+  for ((i=0; i < 10; i++)); do
+    INFO 'Attempting to initialize free device'
+    _tmp="$(mktemp)"
+    # return name of first free device
+    zramctl \
+      --algorithm "$COMP_ALGORITHM" \
+      --find \
+      --size "$_mem_to_alloc" \
+      --streams "$_streams" &> \
+      "$_tmp"
+    read -r _output < "$_tmp"
+    rm -f "$_tmp"
+    unset _tmp
+    case "$_output" in
+      *'failed to reset: Device or resource busy'*)
+        sleep 1
+        ;;
+      *'zramctl: no free zram device found'*)
+        WARN 'zramctl could not find free device'
+        INFO 'Attempting zram hot add'
+        ! [[ -f '/sys/class/zram-control/hot_add' ]] \
+          && ERRO 'Sorry, this kernel does not support zram hot add'
+        read -r _hot_add < /sys/class/zram-control/hot_add
+        INFO "Hot added new zram swap device: /dev/zram$_hot_add"
+        ;;
+      /dev/zram*)
+        [[ -b "$_output" ]] \
+          || continue
+        _zram_dev="$_output"
+        break
+        ;;
+    esac
   done
 
-  swapon --priority 100 $_swapdevs
+  if [[ -b "$_zram_dev" ]]; then
+    INFO "Successfully initialized zram swap device: $_zram_dev"
+    mkdir -p "$WORK_DIR/zram"
+    mkswap "$_zram_dev" --label "$(basename "$_zram_dev")" &> /dev/null \
+      && swapon --discard --priority $PRIORITY "$_zram_dev" \
+      && ln --symbolic "$_zram_dev" "$WORK_DIR/zram/"
+  else
+    WARN "Could not get free zram device"
+  fi
 }
 
-down() {
-  # print zram swap device names, e.g. /dev/zram0
-  for _dev in $(tail -n +2 /proc/swaps 2>/dev/null | cut -d' ' -f1); do
-    swapoff "$_dev"
+toss() {
+  for zram in "$WORK_DIR/zram"/*; do
+    ! [[ -b $zram ]] \
+      && continue
+    INFO "Removing zram swap device: /dev/$(basename "$zram")"
+    swapoff "$zram" \
+      && zramctl --reset "$(basename "$zram")" \
+      && rm "$zram" \
+      && INFO "Removed zram swap device: /dev/$(basename "$zram")"
   done
-  rmmod zram
 }
 
 main() {
@@ -131,10 +208,10 @@ main() {
     echo 'Sorry, requires root privileges'
     exit 1
   fi
-  if [[ "$1" == 'up' ]]; then
-    up
-  elif [[ "$1" == 'down' ]]; then
-    down
+  if [[ "$1" == 'make' ]]; then
+    make
+  elif [[ "$1" == 'toss' ]]; then
+    toss
   else
     # unknown command
     _usage
