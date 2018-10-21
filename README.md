@@ -13,6 +13,7 @@ zramen toss
 
 ```sh
 install -Dm 755 zramen -t /usr/bin
+cp -a sv/zramen /etc/sv
 ```
 
 ### Dependencies
