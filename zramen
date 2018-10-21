@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# ----------------------------------------------------------------------------
+# zramen: manage zram swap space
+#
+# Inspired by https://aur.archlinux.org/packages/zramswap/
+# ----------------------------------------------------------------------------
+
+# ==============================================================================
+# constants {{{
+
+# use this compression algorithm for zram by default
+readonly COMP_ALGORITHM='lz4'
+
+# allocate this number of CPUs for zram by default
+readonly NCPU=$(nproc)
+
+# allocate this percentage of memory for zram by default
+readonly SIZE=33
+
+# kernel module wording for number of pre-created zram devices
+readonly ZRAM_PARM="$(modinfo zram | grep -Eo '(num_devices|zram_num_devices)')"
+
+# end constants }}}
+# ==============================================================================
+# usage {{{
+
+_usage() {
+read -r -d '' _usage_string <<EOF
+Usage:
+  zramen [-h|--help] <command>
+
+Options:
+  -h, --help  Show this help text
+  -n, --num   Number of CPUs to allocate for zram (Default: $NCPU)
+  -s, --size  Percentage of memory to allocate for zram (Default: $SIZE)
+
+Commands:
+  up          Activate zram swap space
+  down        Deactivate zram swap space
+EOF
+echo "$_usage_string"
+}
+
+_POSITIONAL=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      _usage
+      exit 0
+      ;;
+    -n|--num)
+      _ncpu="$2"
+      # shift past argument and value
+      shift
+      shift
+      ;;
+    -s|--size)
+      _size="$2"
+      shift
+      shift
+      ;;
+    -*)
+      # unknown option
+      _usage
+      exit 1
+      ;;
+    *)
+      _POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# restore positional params
+set -- "${_POSITIONAL[@]}"
+
+# end usage }}}
+# ==============================================================================
+
+# sanitize num input
+_ncpu=${_ncpu:-$NCPU}
+# number of CPUs requested must be 1+
+[[ $_ncpu -gt 0 ]] || _ncpu=1
+# number of CPUs requested must not exceed CPUs available
+[[ $_ncpu -le $NCPU ]] || _ncpu=$NCPU
+
+# sanitize size input
+_size=${_size:-$SIZE}
+[[ $_size -gt 0 ]] || _size=$SIZE
+[[ $_size -le 100 ]] || _size=100
+
+calc() {
+  # truncate to whole number
+  printf '%.f' "$(bc --mathlib <<< "$@")"
+}
+
+up() {
+  local _mem_total
+  local _mem_to_alloc
+  local _mem_per_cpu
+  local _swapdevs
+
+  modprobe zram "$ZRAM_PARM"="$_ncpu"
+
+  _mem_total=$(grep 'MemTotal:' /proc/meminfo | awk '{print $2}')
+  _mem_to_alloc=$(calc "(0 + $_mem_total) * 1024 * ($ZRAM_SIZE / 100)")
+  _mem_per_cpu=$(calc "$_mem_to_alloc / $_ncpu")
+
+  for ((i=0; i < _ncpu; i++)); do
+    echo "$_mem_per_cpu" > "/sys/block/zram$i/disksize"
+    echo "$COMP_ALGORITHM" > "/sys/block/zram$i/comp_algorithm"
+    mkswap "/dev/zram$i" --label "zram$i"
+    _swapdevs+=" /dev/zram$i"
+  done
+
+  swapon --priority 100 $_swapdevs
+}
+
+down() {
+  # print zram swap device names, e.g. /dev/zram0
+  for _dev in $(tail -n +2 /proc/swaps 2>/dev/null | cut -d' ' -f1); do
+    swapoff "$_dev"
+  done
+  rmmod zram
+}
+
+main() {
+  if ! [[ "$UID" == '0' ]]; then
+    echo 'Sorry, requires root privileges'
+    exit 1
+  fi
+  if [[ "$1" == 'up' ]]; then
+    up
+  elif [[ "$1" == 'down' ]]; then
+    down
+  else
+    # unknown command
+    _usage
+    exit 1
+  fi
+}
+
+main "$1"
+
+# vim: set filetype=sh foldmethod=marker foldlevel=0 nowrap:
