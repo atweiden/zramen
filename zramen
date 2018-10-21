@@ -38,13 +38,17 @@ _usage() {
 read -r -d '' _usage_string <<EOF
 Usage:
   zramen [-h|--help] <command>
-  zramen [-a|--algorithm] [-n|--num] [-s|--size] [-p|--priority] make
+  zramen [-a|--algorithm <algo>]
+         [-n|--num <uint>]
+         [-s|--size <uint>]
+         [-p|--priority <int>]
+         make
   zramen toss
 
 Options:
   -h, --help       Show this help text
   -v, --version    Show program version
-  -a, --algorithm  Compressional algorithm for zram (Default: $ZRAM_COMP_ALGORITHM)
+  -a, --algorithm  Compression algorithm for zram (Default: $ZRAM_COMP_ALGORITHM)
   -n, --num        Number of compression streams for zram (Default: $ZRAM_STREAMS)
   -p, --priority   Priority of zram swap device (Default: $ZRAM_PRIORITY)
   -s, --size       Percentage of memory to allocate for zram (Default: $ZRAM_SIZE)
@@ -52,6 +56,23 @@ Options:
 Commands:
   make        Make zram swap device
   toss        Remove zram swap device
+
+Algorithm
+  Run zramctl --help to see a list of acceptable algorithms:
+  | lzo
+  | lz4
+  | lz4hc
+  | deflate
+  | 842
+
+Num
+  Number of cores to use concurrently for zram
+
+Priority
+  Must be an integer <= 32767; higher number means higher priority
+
+Size
+  Percentage of memory to allocate for zram; try <= 50
 EOF
 echo "$_usage_string"
 }
