@@ -77,6 +77,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if ! [[ ${#_POSITIONAL} == 1 ]]; then
+  _usage
+  exit 1
+fi
+
 # restore positional params
 set -- "${_POSITIONAL[@]}"
 
