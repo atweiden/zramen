@@ -38,7 +38,7 @@ _usage() {
 read -r -d '' _usage_string <<EOF
 Usage:
   zramen [-h|--help] <command>
-  zramen [-n|--num] [-s|--size] make
+  zramen [-a|--algorithm] [-n|--num] [-s|--size] [-p|--priority] make
   zramen toss
 
 Options:
