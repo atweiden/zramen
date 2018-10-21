@@ -1,3 +1,4 @@
 #!/bin/sh
+[ -r ./conf ] && . ./conf
 zramen make
 exec pause

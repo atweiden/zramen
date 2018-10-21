@@ -9,15 +9,19 @@
 
 # use this compression algorithm for zram by default
 readonly COMP_ALGORITHM='lz4'
+readonly ZRAM_COMP_ALGORITHM="${ZRAM_COMP_ALGORITHM:-$COMP_ALGORITHM}"
 
 # give zram swap device highest priority
 readonly PRIORITY=32767
+readonly ZRAM_PRIORITY="${ZRAM_PRIORITY:-$PRIORITY}"
 
 # allocate this percentage of memory for zram by default
 readonly SIZE=25
+readonly ZRAM_SIZE="${ZRAM_SIZE:-$SIZE}"
 
 # set the maximum number of compression streams for zram
 readonly STREAMS=$(nproc)
+readonly ZRAM_STREAMS="${ZRAM_STREAMS:-$STREAMS}"
 
 # set TMPDIR to work directory for mktemp
 readonly WORK_DIR='/var/run/zramen'
@@ -35,9 +39,11 @@ Usage:
   zramen toss
 
 Options:
-  -h, --help  Show this help text
-  -n, --num   Number of compression streams for zram (Default: $STREAMS)
-  -s, --size  Percentage of memory to allocate for zram (Default: $SIZE)
+  -h, --help       Show this help text
+  -a, --algorithm  Compressional algorithm for zram (Default: $ZRAM_COMP_ALGORITHM)
+  -n, --num        Number of compression streams for zram (Default: $ZRAM_STREAMS)
+  -p, --priority   Priority of zram swap device (Default: $ZRAM_PRIORITY)
+  -s, --size       Percentage of memory to allocate for zram (Default: $ZRAM_SIZE)
 
 Commands:
   make        Make zram swap device
@@ -54,9 +60,19 @@ while [[ $# -gt 0 ]]; do
       _usage
       exit 0
       ;;
+    -a|--algorithm)
+      _algorithm="$2"
+      shift
+      shift
+      ;;
     -n|--num)
       _streams="$2"
       # shift past argument and value
+      shift
+      shift
+      ;;
+    -p|--priority)
+      _priority="$2"
       shift
       shift
       ;;
@@ -93,15 +109,32 @@ set -- "${_POSITIONAL[@]}"
 # end usage }}}
 # ==============================================================================
 
+# sanitize compression algorithm input
+_algorithm="${_algorithm:-$ZRAM_COMP_ALGORITHM}"
+case "$_algorithm" in
+  # proper algo chosen, no action necessary
+  lzo|lz4|lz4hc|deflate|842)
+    ;;
+  # improper algo chosen, reset to default
+  *)
+    _algorithm="$COMP_ALGORITHM"
+    ;;
+esac
+
+# sanitize priority input
+_priority=${_priority:-$ZRAM_PRIORITY}
+[[ $_priority -le 32767 ]] \
+  || _priority=32767
+
 # sanitize size input
-_size=${_size:-$SIZE}
+_size=${_size:-$ZRAM_SIZE}
 [[ $_size -gt 0 ]] \
   || _size=$SIZE
 [[ $_size -le 100 ]] \
   || _size=100
 
 # sanitize streams input
-_streams=${_streams:-$STREAMS}
+_streams=${_streams:-$ZRAM_STREAMS}
 # number of CPUs requested must be 1+
 [[ $_streams -gt 0 ]] \
   || _streams=1
@@ -161,7 +194,7 @@ make() {
     _tmp="$(mktemp)"
     # return name of first free device
     zramctl \
-      --algorithm "$COMP_ALGORITHM" \
+      --algorithm "$_algorithm" \
       --find \
       --size "$_mem_to_alloc" \
       --streams "$_streams" &> \
@@ -194,7 +227,7 @@ make() {
     INFO "Successfully initialized zram swap device: $_zram_dev"
     mkdir -p "$WORK_DIR/zram"
     mkswap "$_zram_dev" --label "$(basename "$_zram_dev")" &> /dev/null \
-      && swapon --discard --priority $PRIORITY "$_zram_dev" \
+      && swapon --discard --priority $_priority "$_zram_dev" \
       && ln --symbolic "$_zram_dev" "$WORK_DIR/zram/"
   else
     WARN "Could not get free zram device"

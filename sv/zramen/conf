@@ -1,0 +1,4 @@
+#export ZRAM_COMP_ALGORITHM='lz4'
+#export ZRAM_PRIORITY=32767
+#export ZRAM_SIZE=25
+#export ZRAM_STREAMS=1
