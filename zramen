@@ -70,9 +70,14 @@ while [[ $# -gt 0 ]]; do
       _usage
       exit 1
       ;;
-    *)
+    make|toss)
       _POSITIONAL+=("$1")
       shift
+      ;;
+    *)
+      # unknown command
+      _usage
+      exit 1
       ;;
   esac
 done
