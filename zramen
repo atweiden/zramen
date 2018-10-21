@@ -128,8 +128,8 @@ INFO_E() {
 }
 
 calc() {
-  # round to nearest tenth
-  printf '%.1f' "$(bc --mathlib <<< "$@")"
+  # truncate to whole number
+  printf '%.f' "$(bc --mathlib <<< "$@")"
 }
 
 make() {
