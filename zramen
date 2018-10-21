@@ -24,7 +24,7 @@ readonly STREAMS=$(nproc)
 readonly ZRAM_STREAMS="${ZRAM_STREAMS:-$STREAMS}"
 
 # zramen version number
-readonly VERSION="0.0.2"
+readonly VERSION="0.1.0"
 
 # set TMPDIR to work directory for mktemp
 readonly WORK_DIR='/var/run/zramen'
@@ -66,10 +66,10 @@ Algorithm
   | 842
 
 Num
-  Number of cores to use concurrently for zram
+  Number of zram compression streams; try one per core
 
 Priority
-  Must be an integer <= 32767; higher number means higher priority
+  Must be an integer <= 32767; higher number means higher zram priority
 
 Size
   Percentage of memory to allocate for zram; try <= 50
@@ -83,6 +83,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help)
       _usage
+      exit 0
+      ;;
+    -v|--version)
+      echo "$VERSION"
       exit 0
       ;;
     -a|--algorithm)
