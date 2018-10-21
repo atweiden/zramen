@@ -5,8 +5,8 @@ Lightweight zram manager
 ## Synopsis
 
 ```sh
-zramen --num 8 up
-zramen down
+zramen make
+zramen toss
 ```
 
 ## Dependencies
