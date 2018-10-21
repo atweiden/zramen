@@ -1,6 +1,6 @@
 # zramen
 
-Lightweight zram manager
+Manage zram swap space
 
 ## Synopsis
 
