@@ -23,6 +23,9 @@ readonly ZRAM_SIZE="${ZRAM_SIZE:-$SIZE}"
 readonly STREAMS=$(nproc)
 readonly ZRAM_STREAMS="${ZRAM_STREAMS:-$STREAMS}"
 
+# zramen version number
+readonly VERSION="0.0.2"
+
 # set TMPDIR to work directory for mktemp
 readonly WORK_DIR='/var/run/zramen'
 TMPDIR="$WORK_DIR"
@@ -40,6 +43,7 @@ Usage:
 
 Options:
   -h, --help       Show this help text
+  -v, --version    Show program version
   -a, --algorithm  Compressional algorithm for zram (Default: $ZRAM_COMP_ALGORITHM)
   -n, --num        Number of compression streams for zram (Default: $ZRAM_STREAMS)
   -p, --priority   Priority of zram swap device (Default: $ZRAM_PRIORITY)
