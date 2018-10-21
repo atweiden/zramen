@@ -9,14 +9,20 @@ zramen make
 zramen toss
 ```
 
-## Dependencies
+## Installation
+
+```sh
+install -Dm 755 zramen -t /usr/bin
+```
+
+### Dependencies
 
 - awk
 - bash
 - bc
 - coreutils
-- kmod
 - grep
+- kmod
 - util-linux
 
 ## See Also
