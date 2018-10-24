@@ -24,7 +24,7 @@ readonly STREAMS=$(nproc)
 readonly ZRAM_STREAMS="${ZRAM_STREAMS:-$STREAMS}"
 
 # zramen version number
-readonly VERSION="0.1.0"
+readonly VERSION=0.1.0
 
 # set TMPDIR to work directory for mktemp
 readonly WORK_DIR='/var/run/zramen'
