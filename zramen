@@ -180,13 +180,8 @@ WARN() {
 }
 
 ERRO() {
-  echo "zramen#error: $*"
+  echo "zramen#erro: $*"
   exit 1
-}
-
-INFO_E() {
-  INFO "$@"
-  exit 0
 }
 
 calc() {
@@ -205,7 +200,7 @@ make() {
   if ! [[ -d '/sys/module/zram' ]]; then
     INFO 'Attempting to find zram module - not part of kernel'
     modprobe --dry-run zram 2>/dev/null \
-      || ERRO "Sorry, could not find zram module"
+      || ERRO 'Sorry, could not find zram module'
     # loop to handle zram initialization problems
     for ((i=0; i < 10; i++)); do
       [[ -d '/sys/module/zram' ]] \
@@ -259,7 +254,7 @@ make() {
       && swapon --discard --priority $_priority "$_zram_dev" \
       && ln --symbolic "$_zram_dev" "$WORK_DIR/zram/"
   else
-    WARN "Could not get free zram device"
+    WARN 'Could not get free zram device'
   fi
 }
 
