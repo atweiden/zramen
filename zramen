@@ -268,6 +268,8 @@ toss() {
       && rm "$zram" \
       && INFO "Removed zram swap device: /dev/$(basename "$zram")"
   done
+  [[ -d "$WORK_DIR" ]] \
+    && rm -rf "$WORK_DIR"
 }
 
 main() {
@@ -276,7 +278,7 @@ main() {
     exit 1
   fi
   [[ -d "$WORK_DIR" ]] \
-    && mkdir -p "$WORK_DIR"
+    || mkdir -p "$WORK_DIR"
   if [[ "$1" == 'make' ]]; then
     make
   elif [[ "$1" == 'toss' ]]; then
