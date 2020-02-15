@@ -60,6 +60,7 @@ Commands:
 Algorithm
   Run zramctl --help to see a list of acceptable algorithms:
   | lzo
+  | lzo-rle
   | lz4
   | lz4hc
   | deflate
@@ -142,7 +143,7 @@ set -- "${_POSITIONAL[@]}"
 _algorithm="${_algorithm:-$ZRAM_COMP_ALGORITHM}"
 case "$_algorithm" in
   # proper algo chosen, no action necessary
-  lzo|lz4|lz4hc|deflate|842)
+  lzo|lzo-rle|lz4|lz4hc|deflate|842)
     ;;
   # improper algo chosen, reset to default
   *)
