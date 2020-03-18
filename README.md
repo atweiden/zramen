@@ -30,6 +30,7 @@ cp -a sv/zramen /etc/sv
 
 - [runit-swap](https://github.com/thypon/runit-swap)
 - [systemd-swap](https://github.com/Nefelim4ag/systemd-swap)
+- [zram-init](https://github.com/vaeth/zram-init)
 - [zramswap](https://aur.archlinux.org/packages/zramswap/)
 
 ## Licensing
