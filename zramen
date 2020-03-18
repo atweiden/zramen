@@ -63,6 +63,7 @@ Algorithm
   | lzo-rle
   | lz4
   | lz4hc
+  | zstd
   | deflate
   | 842
 
@@ -143,7 +144,7 @@ set -- "${_POSITIONAL[@]}"
 _algorithm="${_algorithm:-$ZRAM_COMP_ALGORITHM}"
 case "$_algorithm" in
   # proper algo chosen, no action necessary
-  lzo|lzo-rle|lz4|lz4hc|deflate|842)
+  lzo|lzo-rle|lz4|lz4hc|zstd|deflate|842)
     ;;
   # improper algo chosen, reset to default
   *)
