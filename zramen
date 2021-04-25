@@ -16,8 +16,12 @@ readonly PRIORITY=32767
 readonly ZRAM_PRIORITY="${ZRAM_PRIORITY:-$PRIORITY}"
 
 # allocate this percentage of memory for zram by default
-readonly SIZE=25
+readonly SIZE=50
 readonly ZRAM_SIZE="${ZRAM_SIZE:-$SIZE}"
+
+# sets max size of zram in MiB
+readonly MAX_SIZE=4096
+readonly ZRAM_MAX_SIZE="${ZRAM_MAX_SIZE:-$MAX_SIZE}"
 
 # set the maximum number of compression streams for zram
 readonly STREAMS=$(nproc)
@@ -41,6 +45,7 @@ Usage:
   zramen [-a|--algorithm <algo>]
          [-n|--num <uint>]
          [-s|--size <uint>]
+	 [-m|--max-size <int>]
          [-p|--priority <int>]
          make
   zramen toss
@@ -52,6 +57,7 @@ Options:
   -n, --num        Number of compression streams for zram (Default: $ZRAM_STREAMS)
   -p, --priority   Priority of zram swap device (Default: $ZRAM_PRIORITY)
   -s, --size       Percentage of memory to allocate for zram (Default: $ZRAM_SIZE)
+  -m, --max-size   Maximum size of zram in MiB (Default: $ZRAM_MAX_SIZE)
 
 Commands:
   make        Make zram swap device
@@ -75,6 +81,10 @@ Priority
 
 Size
   Percentage of memory to allocate for zram; try <= 50
+
+Max Size
+  Maximum size of created zram; use if plenty of memory
+
 EOF
 echo "$_usage_string"
 }
@@ -109,6 +119,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -s|--size)
       _size="$2"
+      shift
+      shift
+      ;;
+    -m|--max)
+      _max_size="$2"
       shift
       shift
       ;;
@@ -164,6 +179,11 @@ _size=${_size:-$ZRAM_SIZE}
 [[ $_size -le 100 ]] \
   || _size=100
 
+# sanitize max size input
+_max_size=${_max_size:-$ZRAM_MAX_SIZE}
+[[ $_max_size -gt 0 ]] \
+  || _max_size=$MAX_SIZE  
+
 # sanitize streams input
 _streams=${_streams:-$ZRAM_STREAMS}
 # number of CPUs requested must be 1+
@@ -195,9 +215,14 @@ make() {
   local _mem_total
   local _mem_to_alloc
   local _zram_dev
-
+  
+  _max_size=$(calc "$_max_size * 1024^2")
   _mem_total=$(grep 'MemTotal:' /proc/meminfo | awk '{print $2}')
   _mem_to_alloc=$(calc "$_mem_total * 1024 * ($_size / 100)")
+
+  if [[ $_mem_to_alloc > $_max_size ]]; then
+    _mem_to_alloc=$_max_size
+  fi
 
   if ! [[ -d '/sys/module/zram' ]]; then
     INFO 'Attempting to find zram module - not part of kernel'
