@@ -215,7 +215,6 @@ make() {
   local _mem_to_alloc
   local _zram_dev
 
-  _max_size=$(calc "$_max_size * 1024^2")
   _mem_total=$(free --mebi | awk '/Mem:/ {print $2}')
   _mem_to_alloc=$(calc "$_mem_total * ($_size / 100)")
 
@@ -246,7 +245,7 @@ make() {
     zramctl \
       --algorithm "$_algorithm" \
       --find \
-      --size "$_mem_to_alloc" \
+      --size "${_mem_to_alloc}MiB" \
       --streams "$_streams" &> \
       "$_tmp"
     read -r _output < "$_tmp"
