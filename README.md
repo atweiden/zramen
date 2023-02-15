@@ -24,6 +24,7 @@ cp -a sv/zramen /etc/sv
 - coreutils
 - grep
 - kmod
+- procps-ng
 - util-linux
 
 ## See Also
