@@ -28,7 +28,7 @@ readonly STREAMS=$(nproc)
 readonly ZRAM_STREAMS="${ZRAM_STREAMS:-$STREAMS}"
 
 # zramen version number
-readonly VERSION=0.5.0
+readonly VERSION=0.6.0
 
 # set TMPDIR to work directory for mktemp
 readonly WORK_DIR='/var/run/zramen'
@@ -218,7 +218,7 @@ make() {
   _mem_total=$(free --mebi | awk '/Mem:/ {print $2}')
   _mem_to_alloc=$(calc "$_mem_total * ($_size / 100)")
 
-  if [[ $_mem_to_alloc > $_max_size ]]; then
+  if [[ $_mem_to_alloc -gt $_max_size ]]; then
     _mem_to_alloc=$_max_size
   fi
 
