@@ -1,0 +1,8 @@
+#!/bin/sh
+envfile /etc/s6/config/zramen.conf
+importas -i ZRAM_COMP_ALGORITHM ZRAM_COMP_ALGORITHM
+importas -i ZRAM_PRIORITY ZRAM_PRIORITY
+importas -i ZRAM_SIZE ZRAM_SIZE
+importas -i ZRAM_MAX_SIZE ZRAM_MAX_SIZE
+importas -i ZRAM_STREAMS ZRAM_STREAMS
+exec /usr/bin/zramen toss
