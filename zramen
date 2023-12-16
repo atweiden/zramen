@@ -162,7 +162,7 @@ case "$_algorithm" in
     ;;
   # improper algo chosen, reset to default
   *)
-    echo "improper algo chosen ($_algorithm), reset to default"
+    WARN 'Improper compression algorithm chosen, using default'
     _algorithm="$COMP_ALGORITHM"
     ;;
 esac
