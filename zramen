@@ -160,8 +160,8 @@ case "$_algorithm" in
   # proper algo chosen, no action necessary
   lzo|lzo-rle|lz4|lz4hc|zstd|deflate|842)
     ;;
-  # improper algo chosen, reset to default
   *)
+    WARN 'Improper compression algorithm chosen, using default'
     _algorithm="$COMP_ALGORITHM"
     ;;
 esac
