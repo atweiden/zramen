@@ -175,8 +175,8 @@ _priority=${_priority:-$ZRAM_PRIORITY}
 _size=${_size:-$ZRAM_SIZE}
 [[ $_size -gt 0 ]] \
   || _size=$SIZE
-[[ $_size -le 100 ]] \
-  || _size=100
+[[ $_size -le 250 ]] \
+  || _size=250
 
 # sanitize max size input
 _max_size=${_max_size:-$ZRAM_MAX_SIZE}
