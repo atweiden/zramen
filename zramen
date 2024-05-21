@@ -205,11 +205,6 @@ ERRO() {
   exit 1
 }
 
-calc() {
-  # truncate to whole number
-  printf '%.f' "$(bc --mathlib <<< "$@")"
-}
-
 make() {
   local _mem_total
   local _mem_to_alloc
