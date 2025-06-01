@@ -33,6 +33,8 @@ readonly VERSION=0.7.1
 readonly WORK_DIR='/var/run/zramen'
 TMPDIR="$WORK_DIR"
 
+readonly ZRAMEN_QUIET="${ZRAMEN_QUIET:-0}"
+
 # end constants }}}
 # ==============================================================================
 # usage {{{
@@ -47,6 +49,7 @@ Usage:
          [-m|--max-size <uint>]
          [-p|--priority <int>]
          [-b|--backing-device <dev>]
+	 [-q|--quiet]
          make
   zramen toss
 
@@ -57,6 +60,7 @@ Options:
   -n, --num              Number of compression streams for zram (Default: $ZRAM_STREAMS)
   -p, --priority         Priority of zram swap device (Default: $ZRAM_PRIORITY)
   -s, --size             Percentage of memory to allocate for zram (Default: $ZRAM_SIZE)
+  -q, --quiet		 Disable info logs (Default: $ZRAMEN_QUIET)
   -m, --max-size         Maximum size of zram in MiB (optional)
   -b, --backing-device   Backing device to use for incompressible pages
 
@@ -104,6 +108,10 @@ while [[ $# -gt 0 ]]; do
     -v|--version)
       echo "$VERSION"
       exit 0
+      ;;
+    -q|--quiet)
+      _quiet=1
+      shift
       ;;
     -a|--algorithm)
       _algorithm="$2"
@@ -164,6 +172,16 @@ set -- "${_POSITIONAL[@]}"
 # end usage }}}
 # ==============================================================================
 
+_quiet="${_quiet:-$ZRAMEN_QUIET}"
+case "$_quiet" in
+  0|1)
+    ;;
+  *)
+    WARN 'Improper value for quiet, fallback to 0'
+    _quiet=0
+    ;;
+esac
+
 # sanitize compression algorithm input
 _algorithm="${_algorithm:-$ZRAM_COMP_ALGORITHM}"
 case "$_algorithm" in
@@ -206,7 +224,9 @@ _streams=${_streams:-$ZRAM_STREAMS}
   || _streams=$STREAMS
 
 INFO() {
-  echo "zramen#info: $*"
+  if [[ $_quiet -eq 0 ]] then
+  	echo "zramen#info: $*"
+  fi
 }
 
 WARN() {

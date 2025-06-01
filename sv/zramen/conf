@@ -3,3 +3,4 @@
 #export ZRAM_SIZE=25
 #export ZRAM_MAX_SIZE=4096
 #export ZRAM_STREAMS=1
+#export ZRAMEN_QUIET=0
