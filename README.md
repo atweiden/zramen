@@ -29,6 +29,7 @@ cp -a sv/zramen /etc/sv
 
 - [runit-swap](https://github.com/thypon/runit-swap)
 - [systemd-swap](https://github.com/Nefelim4ag/systemd-swap)
+- [zram-generator](https://github.com/systemd/zram-generator)
 - [zram-init](https://github.com/vaeth/zram-init)
 - [zram-swap](https://github.com/foundObjects/zram-swap)
 - [zramswap](https://aur.archlinux.org/packages/zramswap/)
