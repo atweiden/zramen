@@ -336,10 +336,17 @@ make() {
       INFO "Continuing without any backing device"
     fi
 
-    zramctl \
-      "$_zram_dev" \
-      --algorithm "$_algorithm" \
-      --size "${_mem_to_alloc}MiB"
+    for _attempt in {1..10}; do
+      if zramctl \
+          "$_zram_dev" \
+          --algorithm "$_algorithm" \
+          --size "${_mem_to_alloc}MiB";then
+        break
+      else
+        echo "Attempt $_attempt"
+        sleep 0.2
+      fi
+    done
 
     mkswap "$_zram_dev" --label "$(basename "$_zram_dev")" &> /dev/null \
       && swapon $_swapon_discard_cli_opts --priority $_priority "$_zram_dev" \
@@ -351,13 +358,25 @@ make() {
 
 toss() {
   for zram in "$WORK_DIR/zram"/*; do
-    ! [[ -b $zram ]] \
-      && continue
+    [[ -b $zram ]] || continue
     INFO "Removing zram swap device: /dev/$(basename "$zram")"
-    swapoff "$zram" \
-      && zramctl --reset "$(basename "$zram")" \
-      && rm "$zram" \
-      && INFO "Removed zram swap device: /dev/$(basename "$zram")"
+    swapoff "$zram"
+
+    local max_attempts=50 # 50 * 0.1 = 5
+    local attempt=1
+      while [[ $attempt -le $max_attempts ]]; do
+        if ! grep -q "$zram" /proc/swaps; then
+          if zramctl --reset "$(basename "$zram")" 2>/dev/null; then
+            INFO "Successfully reset and removed zram swap device: $dev_name"
+            break
+          fi
+        fi
+        sleep 0.1
+        ((attempt++))
+      done
+
+      rm "$zram"
+      INFO "Removed zram swap device: /dev/$(basename "$zram")"
   done
   [[ -d "$WORK_DIR" ]] \
     && rm -rf "$WORK_DIR"
