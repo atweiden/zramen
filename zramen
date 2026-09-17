@@ -46,7 +46,6 @@ read -r -d '' _usage_string <<EOF
 Usage:
   zramen [-h|--help] <command>
   zramen [-a|--algorithm <algo>]
-         [-n|--num <uint>]
          [-s|--size <uint>]
          [-m|--max-size <uint>]
          [-p|--priority <int>]
